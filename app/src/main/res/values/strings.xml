@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">星唱 KTV</string>
+    <string name="tab_library">曲库</string>
+    <string name="tab_queue">点歌</string>
+    <string name="tab_settings">设置</string>
+    <string name="search_hint">搜索歌名 / 歌手 / 拼音首字母</string>
+    <string name="empty_library_title">还没有歌曲</string>
+    <string name="empty_library_subtitle">导入本地 MP3 开启你的演唱会</string>
+    <string name="action_import">导入歌曲</string>
+    <string name="action_play">播放</string>
+    <string name="action_add_to_queue">加入点歌单</string>
+    <string name="action_favorite">收藏</string>
+    <string name="action_delete">删除</string>
+    <string name="vocal_volume">人声音量</string>
+    <string name="original_mode">原唱</string>
+    <string name="karaoke_mode">伴唱</string>
+    <string name="empty_queue">点歌单是空的，去曲库挑一首吧</string>
+    <string name="filter_all">全部</string>
+    <string name="filter_separated">已分离</string>
+    <string name="filter_pending">未分离</string>
+    <string name="filter_favorite">收藏</string>
+    <string name="sort_recent">最近导入</string>
+    <string name="sort_title">歌名</string>
+    <string name="sort_artist">歌手</string>
+    <string name="sort_played">最常播放</string>
+    <string name="lyrics_empty">暂无歌词</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_storage">存储</string>
+    <string name="settings_audio">音频</string>
+    <string name="permission_denied">需要存储权限才能扫描本地音乐</string>
+    <string name="action_grant">授权</string>
+    <string name="now_playing">正在播放</string>
+    <string name="action_clear_queue">清空</string>
+    <string name="ai_separation_hint">AI 真分离将在下个版本上线，当前为算法即时消音</string>
+</resources>

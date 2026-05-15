@@ -1,0 +1,38 @@
+# Built application files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Gradle / Android build output
+.gradle/
+build/
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.kotlin/
+
+# Local config
+local.properties
+keystore.properties
+*.keystore
+*.jks
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Tooling caches that might land here
+/.gradle-tool/
+/song-app.zip
