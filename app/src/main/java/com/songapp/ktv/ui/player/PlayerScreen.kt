@@ -90,11 +90,8 @@ fun PlayerScreen(
     val toast by vm.toast.collectAsState()
     val song = state.currentSong
 
-    var lyricsFocus by rememberSaveable { mutableStateOf(true) }
-    LaunchedEffect(lyrics.isEmpty()) {
-        // 没有歌词时把封面亮出来，有歌词时默认走歌词模式
-        lyricsFocus = lyrics.isNotEmpty()
-    }
+    // 默认封面模式；用户点封面或歌词区手动切换。不再随歌词有无自动切。
+    var lyricsFocus by rememberSaveable { mutableStateOf(false) }
 
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -110,14 +107,19 @@ fun PlayerScreen(
     ) { uri -> uri?.let { vm.importLyricsFromUri(it) } }
 
     val coverHeight by animateDpAsState(
-        targetValue = if (lyricsFocus) 120.dp else 220.dp,
+        targetValue = if (lyricsFocus) 0.dp else 220.dp,
         animationSpec = tween(280),
         label = "coverHeight"
     )
     val coverDiscSize by animateDpAsState(
-        targetValue = if (lyricsFocus) 100.dp else 220.dp,
+        targetValue = if (lyricsFocus) 0.dp else 220.dp,
         animationSpec = tween(280),
         label = "discSize"
+    )
+    val titleVisibleHeight by animateDpAsState(
+        targetValue = if (lyricsFocus) 0.dp else 64.dp,
+        animationSpec = tween(280),
+        label = "titleHeight"
     )
 
     Scaffold(
@@ -134,35 +136,42 @@ fun PlayerScreen(
 
             Spacer(Modifier.height(4.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(coverHeight)
-                    .clickable { lyricsFocus = !lyricsFocus },
-                contentAlignment = Alignment.Center
-            ) {
-                CoverDisc(coverPath = song?.coverPath, isPlaying = state.isPlaying, discSize = coverDiscSize)
+            if (coverHeight > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(coverHeight)
+                        .clickable { lyricsFocus = !lyricsFocus },
+                    contentAlignment = Alignment.Center
+                ) {
+                    CoverDisc(coverPath = song?.coverPath, isPlaying = state.isPlaying, discSize = coverDiscSize)
+                }
+                Spacer(Modifier.height(6.dp))
             }
 
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = song?.title ?: "未播放",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
-            )
-            Text(
-                text = song?.artist ?: "—",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
-            )
-
-            Spacer(Modifier.height(8.dp))
+            if (titleVisibleHeight > 0.dp) {
+                Box(modifier = Modifier.fillMaxWidth().height(titleVisibleHeight)) {
+                    Column {
+                        Text(
+                            text = song?.title ?: "未播放",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+                        )
+                        Text(
+                            text = song?.artist ?: "—",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             Box(
                 modifier = Modifier
                     .weight(1f)

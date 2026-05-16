@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -35,6 +36,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.songapp.ktv.ui.components.AuroraBackground
 import com.songapp.ktv.ui.library.LibraryScreen
+import com.songapp.ktv.ui.online.OnlineSearchScreen
 import com.songapp.ktv.ui.player.PlayerScreen
 import com.songapp.ktv.ui.queue.QueueScreen
 import com.songapp.ktv.ui.settings.SettingsScreen
@@ -43,6 +45,7 @@ import com.songapp.ktv.ui.theme.NeonViolet
 
 private sealed class Tab(val route: String, val label: String) {
     data object Library : Tab("library", "曲库")
+    data object Online : Tab("online", "搜歌")
     data object Queue : Tab("queue", "点歌")
     data object Settings : Tab("settings", "设置")
 }
@@ -51,7 +54,7 @@ private sealed class Tab(val route: String, val label: String) {
 fun KtvRoot() {
     val nav = rememberNavController()
     var selected by rememberSaveable { mutableStateOf(0) }
-    val tabs = remember { listOf(Tab.Library, Tab.Queue, Tab.Settings) }
+    val tabs = remember { listOf(Tab.Library, Tab.Online, Tab.Queue, Tab.Settings) }
 
     AuroraBackground {
         Scaffold(
@@ -78,6 +81,7 @@ fun KtvRoot() {
                                 Icon(
                                     when (tab) {
                                         Tab.Library -> Icons.Filled.LibraryMusic
+                                        Tab.Online -> Icons.Filled.Public
                                         Tab.Queue -> Icons.Filled.QueueMusic
                                         Tab.Settings -> Icons.Filled.Settings
                                     },
@@ -104,6 +108,9 @@ fun KtvRoot() {
             ) {
                 composable(Tab.Library.route) {
                     LibraryScreen(onOpenPlayer = { nav.navigate("player") })
+                }
+                composable(Tab.Online.route) {
+                    OnlineSearchScreen(onOpenPlayer = { nav.navigate("player") })
                 }
                 composable(Tab.Queue.route) {
                     QueueScreen(onOpenPlayer = { nav.navigate("player") })
