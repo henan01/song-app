@@ -27,6 +27,9 @@ class SongRepository(
     suspend fun toggleFavorite(song: Song) = songDao.setFavorite(song.id, !song.isFavorite)
     suspend fun markPlayed(id: String) = songDao.markPlayed(id, System.currentTimeMillis())
     suspend fun getById(id: String): Song? = songDao.getById(id)
+    suspend fun recentSongs(limit: Int = 200): List<Song> = songDao.recentSongs(limit)
+    suspend fun searchSongs(query: String, limit: Int = 80): List<Song> =
+        if (query.isBlank()) songDao.recentSongs(limit) else songDao.searchSongs(query, limit)
     fun observe(id: String): Flow<Song?> = songDao.observe(id)
     fun count(): Flow<Int> = songDao.countFlow()
     suspend fun updateLrcPath(id: String, path: String?) = songDao.updateLrcPath(id, path)
@@ -37,6 +40,8 @@ class SongRepository(
         queueDao.insert(QueueItem(songId = songId, position = queueDao.nextPosition()))
     }
     suspend fun removeFromQueue(id: Long) = queueDao.remove(id)
+    suspend fun removeSongFromQueue(songId: String) = queueDao.removeBySongId(songId)
+    suspend fun moveQueueItemToTop(id: Long) = queueDao.updatePosition(id, queueDao.topPosition())
     suspend fun clearQueue() = queueDao.clear()
     suspend fun queueSnapshot() = queueDao.snapshot()
 

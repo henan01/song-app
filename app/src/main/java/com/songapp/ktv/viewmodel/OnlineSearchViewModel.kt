@@ -2,13 +2,15 @@ package com.songapp.ktv.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.net.Uri
 import com.songapp.ktv.KtvApp
 import com.songapp.ktv.network.MusicSource
 import com.songapp.ktv.network.NotPlayableException
 import com.songapp.ktv.network.SongDownloader
 import com.songapp.ktv.network.TrackMeta
+import com.songapp.ktv.network.source.HttpCatalogSource
 import com.songapp.ktv.network.source.KuwoSource
-import com.songapp.ktv.network.source.NetEaseSource
+import com.songapp.ktv.network.source.UserSourceStore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,13 +22,15 @@ class OnlineSearchViewModel : ViewModel() {
 
     private val app = KtvApp.get()
     private val downloader = SongDownloader(app, app.repository)
+    private val userSourceStore = UserSourceStore(app)
 
     /** 所有已知音乐源（按显示顺序）。*/
-    val allSources: List<MusicSource> = listOf(NetEaseSource, KuwoSource)
+    private val _allSources = MutableStateFlow(loadSources())
+    val allSources: StateFlow<List<MusicSource>> = _allSources.asStateFlow()
 
-    private val sourceById: Map<String, MusicSource> = allSources.associateBy { it.id }
+    private fun sourceById(): Map<String, MusicSource> = _allSources.value.associateBy { it.id }
 
-    private val _enabledSources = MutableStateFlow(allSources.map { it.id }.toSet())
+    private val _enabledSources = MutableStateFlow(_allSources.value.map { it.id }.toSet())
     val enabledSources: StateFlow<Set<String>> = _enabledSources.asStateFlow()
 
     private val _query = MutableStateFlow("")
@@ -53,7 +57,15 @@ class OnlineSearchViewModel : ViewModel() {
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val progress: StateFlow<Map<String, Float>> = _progress.asStateFlow()
 
+    private val _newSourceName = MutableStateFlow("")
+    val newSourceName: StateFlow<String> = _newSourceName.asStateFlow()
+
+    private val _newSourceUrl = MutableStateFlow("")
+    val newSourceUrl: StateFlow<String> = _newSourceUrl.asStateFlow()
+
     fun setQuery(q: String) { _query.value = q }
+    fun setNewSourceName(v: String) { _newSourceName.value = v }
+    fun setNewSourceUrl(v: String) { _newSourceUrl.value = v }
     fun consumeToast() { _toast.value = null }
 
     fun toggleSource(sourceId: String) {
@@ -66,7 +78,7 @@ class OnlineSearchViewModel : ViewModel() {
     fun search() {
         val keyword = _query.value.trim()
         if (keyword.isBlank()) return
-        val enabled = allSources.filter { it.id in _enabledSources.value }
+        val enabled = _allSources.value.filter { it.id in _enabledSources.value }
         if (enabled.isEmpty()) return
         viewModelScope.launch {
             _searching.value = true
@@ -96,7 +108,7 @@ class OnlineSearchViewModel : ViewModel() {
     }
 
     fun download(track: TrackMeta) {
-        val source = sourceById[track.sourceId] ?: run {
+        val source = sourceById()[track.sourceId] ?: run {
             _toast.value = "未知音乐源：${track.sourceId}"
             return
         }
@@ -131,4 +143,50 @@ class OnlineSearchViewModel : ViewModel() {
             app.player.playSong(local)
         }
     }
+
+    fun addUserSource() {
+        val url = _newSourceUrl.value.trim()
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            _toast.value = "请输入 http/https 歌源订阅链接"
+            return
+        }
+        userSourceStore.add(_newSourceName.value, url)
+        reloadSources()
+        _newSourceName.value = ""
+        _newSourceUrl.value = ""
+        _toast.value = "已添加歌源订阅"
+    }
+
+    fun importJsonSource(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val text = app.contentResolver.openInputStream(uri)?.use {
+                    it.bufferedReader(Charsets.UTF_8).readText()
+                } ?: throw IllegalArgumentException("无法读取 JSON 文件")
+                val name = runCatching {
+                    org.json.JSONObject(text).optString("name").takeIf { it.isNotBlank() }
+                }.getOrNull() ?: "本地歌源"
+                userSourceStore.addInline(name, text)
+                reloadSources()
+                _toast.value = "已导入本地 JSON 歌源"
+            } catch (e: Exception) {
+                _toast.value = "导入失败：${e.message ?: e.javaClass.simpleName}"
+            }
+        }
+    }
+
+    fun removeUserSource(sourceId: String) {
+        userSourceStore.remove(sourceId)
+        reloadSources()
+        _toast.value = "已移除歌源"
+    }
+
+    private fun reloadSources() {
+        _allSources.value = loadSources()
+        val valid = _allSources.value.map { it.id }.toSet()
+        _enabledSources.value = (_enabledSources.value intersect valid).ifEmpty { valid }
+    }
+
+    private fun loadSources(): List<MusicSource> =
+        listOf(KuwoSource) + userSourceStore.list().map { HttpCatalogSource(it) }
 }

@@ -118,5 +118,8 @@ dependencies {
     // Splashscreen
     implementation("androidx.core:core-splashscreen:1.0.1")
 
+    // QR code for LAN room sharing
+    implementation("com.google.zxing:core:3.5.3")
+
     testImplementation("junit:junit:4.13.2")
 }

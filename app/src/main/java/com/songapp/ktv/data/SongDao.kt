@@ -34,6 +34,21 @@ interface SongDao {
     @Query("SELECT COUNT(*) FROM songs")
     fun countFlow(): Flow<Int>
 
+    @Query("SELECT * FROM songs ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun recentSongs(limit: Int = 200): List<Song>
+
+    @Query("""
+        SELECT * FROM songs
+        WHERE title    LIKE '%' || :q || '%'
+           OR artist   LIKE '%' || :q || '%'
+           OR album    LIKE '%' || :q || '%'
+           OR pinyinInitials LIKE '%' || :q || '%'
+           OR pinyinFull     LIKE '%' || :q || '%'
+        ORDER BY createdAt DESC
+        LIMIT :limit
+    """)
+    suspend fun searchSongs(q: String, limit: Int = 80): List<Song>
+
     @Query("""
         SELECT * FROM songs
         WHERE (:filter = 'ALL')
@@ -86,11 +101,17 @@ interface QueueDao {
     @Query("DELETE FROM queue WHERE id = :id")
     suspend fun remove(id: Long)
 
+    @Query("DELETE FROM queue WHERE songId = :songId")
+    suspend fun removeBySongId(songId: String)
+
     @Query("DELETE FROM queue")
     suspend fun clear()
 
     @Query("UPDATE queue SET position = :pos WHERE id = :id")
     suspend fun updatePosition(id: Long, pos: Int)
+
+    @Query("SELECT IFNULL(MIN(position), 0) - 1 FROM queue")
+    suspend fun topPosition(): Int
 
     @Query("SELECT * FROM queue ORDER BY position ASC")
     suspend fun snapshot(): List<QueueItem>

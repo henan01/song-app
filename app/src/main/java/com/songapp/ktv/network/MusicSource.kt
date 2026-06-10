@@ -3,12 +3,12 @@ package com.songapp.ktv.network
 import java.io.OutputStream
 
 /**
- * 一个"音乐源"（网易云 / 酷我 / 后续可能加酷狗/咪咕…）需要提供的能力。
+ * 一个"音乐源"需要提供的能力。
  *
  * 所有方法都是 suspend 函数，必须在 IO 上下文执行。
  */
 interface MusicSource {
-    val id: String              // 唯一标识，例如 "netease" / "kuwo"
+    val id: String              // 唯一标识，例如 "kuwo" / "catalog_xxx"
     val displayName: String     // 给用户看的名字
 
     suspend fun search(keyword: String, limit: Int = 30): List<TrackMeta>
@@ -36,7 +36,9 @@ data class TrackMeta(
     val artist: String,
     val album: String,
     val durationMs: Long,
-    val coverUrl: String?
+    val coverUrl: String?,
+    val mediaUrl: String? = null,
+    val lyricUrl: String? = null
 )
 
 class NotPlayableException(msg: String) : RuntimeException(msg)

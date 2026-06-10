@@ -85,7 +85,6 @@ fun PlayerScreen(
 ) {
     val state by vm.state.collectAsState()
     val lyrics by vm.lyrics.collectAsState()
-    val fetching by vm.fetchingLyrics.collectAsState()
     val statusMsg by vm.lyricsStatus.collectAsState()
     val toast by vm.toast.collectAsState()
     val song = state.currentSong
@@ -129,8 +128,6 @@ fun PlayerScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding).statusBarsPadding()) {
             TopBar(
                 onBack = onBack,
-                fetching = fetching,
-                onFetchLyrics = { vm.fetchLyricsOnline() },
                 onImportLyrics = { pickLrc.launch(arrayOf("application/octet-stream", "text/*", "*/*")) }
             )
 
@@ -181,9 +178,7 @@ fun PlayerScreen(
                 LyricView(
                     lines = lyrics,
                     positionMs = state.positionMs,
-                    fetching = fetching,
                     statusMessage = statusMsg,
-                    onFetchOnline = { vm.fetchLyricsOnline() },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -213,8 +208,6 @@ fun PlayerScreen(
 @Composable
 private fun TopBar(
     onBack: () -> Unit,
-    fetching: Boolean,
-    onFetchLyrics: () -> Unit,
     onImportLyrics: () -> Unit
 ) {
     Row(
@@ -233,21 +226,6 @@ private fun TopBar(
         Spacer(Modifier.weight(1f))
         IconButton(onClick = onImportLyrics) {
             Icon(Icons.Outlined.FolderOpen, contentDescription = "导入歌词", tint = MaterialTheme.colorScheme.tertiary)
-        }
-        IconButton(onClick = onFetchLyrics) {
-            if (fetching) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-            } else {
-                Icon(
-                    Icons.Outlined.CloudDownload,
-                    contentDescription = "在线搜索歌词",
-                    tint = MaterialTheme.colorScheme.tertiary
-                )
-            }
         }
         IconButton(onClick = { /* future: open queue sheet */ }) {
             Icon(Icons.Filled.QueueMusic, contentDescription = "队列", tint = MaterialTheme.colorScheme.onSurface)

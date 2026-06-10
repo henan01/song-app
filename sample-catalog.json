@@ -1,0 +1,26 @@
+{
+  "name": "我的家庭KTV歌库",
+  "baseUrl": "http://你的电脑IP:8088/music/",
+  "tracks": [
+    {
+      "id": "demo-song-001",
+      "title": "示例歌曲",
+      "artist": "示例歌手",
+      "album": "示例专辑",
+      "durationMs": 240000,
+      "mediaUrl": "demo-song-001.mp3",
+      "lyricUrl": "demo-song-001.lrc",
+      "coverUrl": "demo-song-001.jpg"
+    },
+    {
+      "id": "jay-qingtian",
+      "title": "晴天",
+      "artist": "周杰伦",
+      "album": "叶惠美",
+      "durationMs": 269000,
+      "mediaUrl": "jay-qingtian.mp3",
+      "lyricUrl": "jay-qingtian.lrc",
+      "coverUrl": "jay-qingtian.jpg"
+    }
+  ]
+}

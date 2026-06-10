@@ -1,6 +1,8 @@
 package com.songapp.ktv.player
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -27,6 +29,7 @@ import kotlinx.coroutines.launch
 class KtvPlayer(context: Context, private val repo: SongRepository) {
 
     val karaoke = KaraokeAudioProcessor()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private val factory = object : DefaultRenderersFactory(context) {
         override fun buildAudioSink(
@@ -80,7 +83,11 @@ class KtvPlayer(context: Context, private val repo: SongRepository) {
         })
     }
 
-    fun playSong(song: Song) {
+    fun playSong(song: Song) = runOnMain {
+        playSongInternal(song)
+    }
+
+    private fun playSongInternal(song: Song) {
         val current = _state.value.currentSong
         if (current?.id == song.id && current.mp3Path == song.mp3Path) {
             // 已经是这首：保持当前进度，只确保在播放
@@ -101,34 +108,31 @@ class KtvPlayer(context: Context, private val repo: SongRepository) {
         }
     }
 
-    fun togglePlay() {
+    fun togglePlay() = runOnMain {
         if (exo.isPlaying) exo.pause() else exo.play()
     }
 
-    fun seekTo(ms: Long) = exo.seekTo(ms)
+    fun seekTo(ms: Long) = runOnMain { exo.seekTo(ms) }
 
-    fun setVocalLevel(level: Float) {
+    fun setVocalLevel(level: Float) = runOnMain {
         karaoke.vocalLevel = level.coerceIn(0f, 1f)
         _state.value = _state.value.copy(vocalLevel = karaoke.vocalLevel)
     }
 
-    fun setVolume(v: Float) {
+    fun setVolume(v: Float) = runOnMain {
         exo.volume = v.coerceIn(0f, 1f)
         _state.value = _state.value.copy(volume = exo.volume)
     }
 
     fun playNext() {
         scope.launch {
+            _state.value.currentSong?.let { repo.removeSongFromQueue(it.id) }
             val q = repo.queueSnapshot()
-            val current = _state.value.currentSong
-            val nextItem = if (current == null) {
-                q.firstOrNull()
+            val nextItem = q.firstOrNull()
+            if (nextItem == null) {
+                stopInternal()
             } else {
-                val idx = q.indexOfFirst { it.songId == current.id }
-                if (idx >= 0 && idx < q.size - 1) q[idx + 1] else q.firstOrNull { it.songId != current.id }
-            }
-            nextItem?.let {
-                repo.getById(it.songId)?.let { s -> playSong(s) }
+                repo.getById(nextItem.songId)?.let { s -> playSongInternal(s) } ?: stopInternal()
             }
         }
     }
@@ -138,8 +142,24 @@ class KtvPlayer(context: Context, private val repo: SongRepository) {
             val q = repo.queueSnapshot()
             val current = _state.value.currentSong ?: return@launch
             val idx = q.indexOfFirst { it.songId == current.id }
-            if (idx > 0) repo.getById(q[idx - 1].songId)?.let { playSong(it) }
+            if (idx > 0) repo.getById(q[idx - 1].songId)?.let { playSongInternal(it) }
         }
+    }
+
+    private fun stopInternal() {
+        exo.stop()
+        _state.value = _state.value.copy(
+            currentSong = null,
+            isPlaying = false,
+            isBuffering = false,
+            positionMs = 0L,
+            durationMs = 0L
+        )
+        stopPositionTicker()
+    }
+
+    private fun runOnMain(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) block() else mainHandler.post(block)
     }
 
     private fun startPositionTicker() {

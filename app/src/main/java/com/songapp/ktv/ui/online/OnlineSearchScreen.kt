@@ -1,5 +1,7 @@
 package com.songapp.ktv.ui.online
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,10 +26,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -81,9 +85,15 @@ fun OnlineSearchScreen(
     val progress by vm.progress.collectAsState()
     val toast by vm.toast.collectAsState()
     val enabledSources by vm.enabledSources.collectAsState()
+    val allSources by vm.allSources.collectAsState()
+    val newSourceName by vm.newSourceName.collectAsState()
+    val newSourceUrl by vm.newSourceUrl.collectAsState()
 
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val pickJson = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let { vm.importJsonSource(it) } }
     LaunchedEffect(toast) {
         toast?.let {
             scope.launch { snackbar.showSnackbar(it) }
@@ -111,9 +121,18 @@ fun OnlineSearchScreen(
             )
             Spacer(Modifier.height(6.dp))
             SourceChips(
-                allSources = vm.allSources,
+                allSources = allSources,
                 enabled = enabledSources,
-                onToggle = vm::toggleSource
+                onToggle = vm::toggleSource,
+                onRemove = vm::removeUserSource
+            )
+            SourceSubscriptionBox(
+                name = newSourceName,
+                url = newSourceUrl,
+                onName = vm::setNewSourceName,
+                onUrl = vm::setNewSourceUrl,
+                onAdd = vm::addUserSource,
+                onImportJson = { pickJson.launch(arrayOf("application/json", "text/*", "*/*")) }
             )
             Hint()
             if (results.isEmpty() && !searching) {
@@ -154,9 +173,9 @@ private fun Header() {
         ) { Icon(Icons.Outlined.Public, contentDescription = null, tint = Color.Black) }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("在线搜歌", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text("歌源", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
             Text(
-                "多音乐源 · 仅支持免费曲目",
+                "酷我过渡源 + 用户自备订阅",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -210,7 +229,8 @@ private fun SearchInput(
 private fun SourceChips(
     allSources: List<com.songapp.ktv.network.MusicSource>,
     enabled: Set<String>,
-    onToggle: (String) -> Unit
+    onToggle: (String) -> Unit,
+    onRemove: (String) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -223,17 +243,81 @@ private fun SourceChips(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         allSources.forEach { src ->
-            FilterChip(
-                selected = src.id in enabled,
-                onClick = { onToggle(src.id) },
-                label = { Text(src.displayName) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = NeonViolet.copy(alpha = 0.22f),
-                    selectedLabelColor = NeonViolet,
-                    containerColor = Color.White.copy(alpha = 0.04f),
-                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FilterChip(
+                    selected = src.id in enabled,
+                    onClick = { onToggle(src.id) },
+                    label = { Text(src.displayName) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = NeonViolet.copy(alpha = 0.22f),
+                        selectedLabelColor = NeonViolet,
+                        containerColor = Color.White.copy(alpha = 0.04f),
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
+                if (src.id.startsWith("catalog_")) {
+                    IconButton(onClick = { onRemove(src.id) }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.Delete, contentDescription = "移除歌源", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SourceSubscriptionBox(
+    name: String,
+    url: String,
+    onName: (String) -> Unit,
+    onUrl: (String) -> Unit,
+    onAdd: () -> Unit,
+    onImportJson: () -> Unit
+) {
+    GlassSurface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        cornerRadius = 18.dp
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text("添加自己的歌源订阅", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.height(6.dp))
+            OutlinedTextField(
+                value = name,
+                onValueChange = onName,
+                placeholder = { Text("名称，可不填") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.White.copy(alpha = 0.12f),
+                    focusedIndicatorColor = NeonCyan,
+                    cursorColor = NeonPink
+                ),
+                modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = onUrl,
+                    placeholder = { Text("https://你的歌库/catalog.json") },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.White.copy(alpha = 0.12f),
+                        focusedIndicatorColor = NeonCyan,
+                        cursorColor = NeonPink
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = onAdd) { Text("添加") }
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onImportJson, modifier = Modifier.fillMaxWidth()) {
+                Text("选择本地 catalog.json")
+            }
         }
     }
 }
@@ -241,7 +325,7 @@ private fun SourceChips(
 @Composable
 private fun Hint() {
     Text(
-        "下载会保存到本设备：MP3 + 封面 + 歌词。VIP / 无版权曲目会标记不可下载。",
+        "下载会保存到本设备：音频 + 封面 + 同源歌词。订阅源由用户自行提供，请只使用你有权使用的内容。",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)
@@ -257,7 +341,7 @@ private fun EmptyHint() {
             Text("搜你想唱的歌", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.height(4.dp))
             Text(
-                "默认同时搜「网易云」和「酷我」，结果合并显示",
+                "可搜索酷我过渡源，也可以添加自己的 JSON 歌库订阅",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -360,9 +444,8 @@ private fun ResultRow(
 @Composable
 private fun SourceBadge(sourceId: String) {
     val (label, color) = when (sourceId) {
-        "netease" -> "网易" to NeonPink
         "kuwo" -> "酷我" to NeonCyan
-        else -> sourceId to NeonViolet
+        else -> if (sourceId.startsWith("catalog_")) "自备" to NeonGold else sourceId to NeonViolet
     }
     Box(
         modifier = Modifier

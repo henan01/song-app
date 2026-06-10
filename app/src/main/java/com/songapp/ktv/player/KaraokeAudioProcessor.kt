@@ -15,9 +15,9 @@ import kotlin.math.exp
  *   - 取中央声道 mid = (L + R) / 2
  *   - 对 mid 做一阶低通滤波得到 mid_low（低频，保留贝斯/底鼓等位于中央的低音乐器）
  *   - mid_high = mid - mid_low（高频中央内容，主要是人声）
- *   - 输出时只按比例减去 mid_high，低频中央内容完全保留
+ *   - 输出时主要减去 mid_high，再轻压一部分完整 mid，覆盖人声基频残留
  *
- * 因此滑杆 0 时：人声大幅消除，但低音/伴奏 body 不变
+ * 因此滑杆 0 时：人声大幅消除，低音/伴奏会有少量损耗但比旧版残留更少
  *      滑杆 1 时：完全保持原信号
  *      中间值线性插值，体感是"人声大小"而不是"整体音量"。
  */
@@ -28,7 +28,7 @@ class KaraokeAudioProcessor : BaseAudioProcessor() {
 
     private var lpfState: Float = 0f
     private var lpfAlpha: Float = 0.978f
-    private val cutoffHz: Float = 220f
+    private val cutoffHz: Float = 170f
 
     override fun onConfigure(inputAudioFormat: AudioFormat): AudioFormat {
         if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT) {
@@ -61,7 +61,8 @@ class KaraokeAudioProcessor : BaseAudioProcessor() {
                     val mid = (l + r) * 0.5f
                     lp = a * lp + invA * mid
                     val midHigh = mid - lp
-                    val toRemove = cancelStrength * midHigh
+                    val foundation = mid * 0.22f
+                    val toRemove = cancelStrength * (midHigh + foundation)
                     val outL = (l - toRemove).toInt().coerceIn(-32768, 32767)
                     val outR = (r - toRemove).toInt().coerceIn(-32768, 32767)
                     out.putShort(outL.toShort())

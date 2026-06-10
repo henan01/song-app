@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.QueueMusic
@@ -35,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.songapp.ktv.ui.components.AuroraBackground
+import com.songapp.ktv.ui.home.HomeScreen
 import com.songapp.ktv.ui.library.LibraryScreen
 import com.songapp.ktv.ui.online.OnlineSearchScreen
 import com.songapp.ktv.ui.player.PlayerScreen
@@ -44,17 +46,18 @@ import com.songapp.ktv.ui.theme.NeonPink
 import com.songapp.ktv.ui.theme.NeonViolet
 
 private sealed class Tab(val route: String, val label: String) {
+    data object Home : Tab("home", "开唱")
     data object Library : Tab("library", "曲库")
-    data object Online : Tab("online", "搜歌")
+    data object Online : Tab("online", "歌源")
     data object Queue : Tab("queue", "点歌")
-    data object Settings : Tab("settings", "设置")
+    data object Settings : Tab("settings", "我的")
 }
 
 @Composable
 fun KtvRoot() {
     val nav = rememberNavController()
     var selected by rememberSaveable { mutableStateOf(0) }
-    val tabs = remember { listOf(Tab.Library, Tab.Online, Tab.Queue, Tab.Settings) }
+    val tabs = remember { listOf(Tab.Home, Tab.Library, Tab.Online, Tab.Queue, Tab.Settings) }
 
     AuroraBackground {
         Scaffold(
@@ -80,6 +83,7 @@ fun KtvRoot() {
                             icon = {
                                 Icon(
                                     when (tab) {
+                                        Tab.Home -> Icons.Filled.Home
                                         Tab.Library -> Icons.Filled.LibraryMusic
                                         Tab.Online -> Icons.Filled.Public
                                         Tab.Queue -> Icons.Filled.QueueMusic
@@ -103,9 +107,30 @@ fun KtvRoot() {
         ) { padding ->
             NavHost(
                 navController = nav,
-                startDestination = Tab.Library.route,
+                startDestination = Tab.Home.route,
                 modifier = Modifier.fillMaxSize().padding(padding)
             ) {
+                composable(Tab.Home.route) {
+                    HomeScreen(
+                        onOpenLibrary = {
+                            selected = tabs.indexOf(Tab.Library)
+                            nav.navigate(Tab.Library.route) { launchSingleTop = true }
+                        },
+                        onOpenSources = {
+                            selected = tabs.indexOf(Tab.Online)
+                            nav.navigate(Tab.Online.route) { launchSingleTop = true }
+                        },
+                        onOpenQueue = {
+                            selected = tabs.indexOf(Tab.Queue)
+                            nav.navigate(Tab.Queue.route) { launchSingleTop = true }
+                        },
+                        onOpenPlayer = { nav.navigate("player") },
+                        onOpenSettings = {
+                            selected = tabs.indexOf(Tab.Settings)
+                            nav.navigate(Tab.Settings.route) { launchSingleTop = true }
+                        }
+                    )
+                }
                 composable(Tab.Library.route) {
                     LibraryScreen(onOpenPlayer = { nav.navigate("player") })
                 }
